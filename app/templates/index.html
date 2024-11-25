@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Analytics</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Market Analytics</h1>
+
+        <div class="input-section">
+            <input type="text" id="stockSymbol" placeholder="Enter stock symbol (e.g., AAPL)">
+            <select id="timePeriod">
+                <option value="1d">Last Day</option>
+                <option value="1wk">1 Week</option>
+                <option value="1mo" selected>1 Month</option>
+                <option value="3mo">3 Months</option>
+            </select>
+            <button onclick="fetchStockData()">Get Stock Data</button>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-box">
+                <span class="stat-label">Min Value:</span>
+                <span id="minValue">-</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Max Value:</span>
+                <span id="maxValue">-</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Price Change:</span>
+                <span id="priceChange">-</span>
+            </div>
+        </div>
+
+        <div id="stockChart"></div>
+
+        <div class="stock-info">
+            <p>Last Open: <span id="lastOpen">-</span></p>
+            <p>Last Close: <span id="lastClose">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        function fetchStockData() {
+            const symbol = document.getElementById('stockSymbol').value;
+            const period = document.getElementById('timePeriod').value;
+
+            fetch(`/api/stock-data/?symbol=${symbol}&period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    // Calculate min, max, and price change
+                    const closeValues = data.close;
+                    const minValue = Math.min(...closeValues);
+                    const maxValue = Math.max(...closeValues);
+                    const priceChange = ((closeValues[closeValues.length - 1] - closeValues[0]) / closeValues[0] * 100).toFixed(2);
+
+                    // Update stats
+                    document.getElementById('minValue').textContent = `$${minValue.toFixed(2)}`;
+                    document.getElementById('maxValue').textContent = `$${maxValue.toFixed(2)}`;
+                    document.getElementById('priceChange').textContent = `${priceChange}%`;
+                    document.getElementById('priceChange').style.color = priceChange >= 0 ? 'green' : 'red';
+
+                    // Create the line chart
+                    const trace = {
+                        x: data.dates,
+                        y: data.close,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: 'Close Price',
+                        line: {
+                            color: '#17BECF',
+                            width: 2
+                        },
+                        marker: {
+                            size: 6,
+                            color: '#17BECF',
+                            line: {
+                                color: '#fff',
+                                width: 1
+                            }
+                        },
+                        hovertemplate: data.period === '1d' ?
+                            '<b>Time:</b> %{x}<br>' +
+                            '<b>Price:</b> $%{y:.2f}<br>' +
+                            '<extra></extra>' :
+                            '<b>Date:</b> %{x}<br>' +
+                            '<b>Price:</b> $%{y:.2f}<br>' +
+                            '<extra></extra>'
+                    };
+
+                    // Add candlestick data
+                    const candlestick = {
+                        x: data.dates,
+                        open: data.open,
+                        high: data.high,
+                        low: data.low,
+                        close: data.close,
+                        type: 'candlestick',
+                        name: 'OHLC',
+                        visible: 'legendonly'
+                    };
+
+                    // Add high/low markers
+                    const highMarker = {
+                        x: [data.dates[data.high.indexOf(Math.max(...data.high))]],
+                        y: [Math.max(...data.high)],
+                        mode: 'markers+text',
+                        type: 'scatter',
+                        name: 'Day High',
+                        text: ['High'],
+                        textposition: 'top',
+                        marker: {
+                            color: 'green',
+                            size: 10,
+                            symbol: 'triangle-up'
+                        },
+                        showlegend: false
+                    };
+
+                    const lowMarker = {
+                        x: [data.dates[data.low.indexOf(Math.min(...data.low))]],
+                        y: [Math.min(...data.low)],
+                        mode: 'markers+text',
+                        type: 'scatter',
+                        name: 'Day Low',
+                        text: ['Low'],
+                        textposition: 'bottom',
+                        marker: {
+                            color: 'red',
+                            size: 10,
+                            symbol: 'triangle-down'
+                        },
+                        showlegend: false
+                    };
+
+                    // Update layout with more details
+                    const layout = {
+                        title: `${data.symbol} Stock Price (${data.period})`,
+                        xaxis: {
+                            title: data.period === '1d' ? 'Time' : 'Date',
+                            rangeslider: { visible: true }
+                        },
+                        yaxis: {
+                            title: 'Price ($)',
+                            tickprefix: '$'
+                        },
+                        showlegend: true,
+                        legend: {
+                            x: 0,
+                            y: 1.2
+                        },
+                        hovermode: 'x unified',
+                        annotations: [
+                            {
+                                x: data.dates[0],
+                                y: data.open[0],
+                                text: 'Open: $' + data.open[0].toFixed(2),
+                                showarrow: true,
+                                arrowhead: 2,
+                                ax: -30,
+                                ay: -30
+                            },
+                            {
+                                x: data.dates[data.dates.length - 1],
+                                y: data.close[data.close.length - 1],
+                                text: 'Close: $' + data.close[data.close.length - 1].toFixed(2),
+                                showarrow: true,
+                                arrowhead: 2,
+                                ax: 30,
+                                ay: -30
+                            }
+                        ]
+                    };
+
+                    const config = {
+                        responsive: true,
+                        displayModeBar: true,
+                        modeBarButtons: [
+                            ['zoom2d', 'pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d', 'resetScale2d'],
+                            ['toImage']
+                        ]
+                    };
+
+                    // Plot with all traces
+                    Plotly.newPlot('stockChart', [trace, candlestick, highMarker, lowMarker], layout, config);
+
+                    // Update last open/close values
+                    document.getElementById('lastOpen').textContent = `$${data.last_open.toFixed(2)}`;
+                    document.getElementById('lastClose').textContent = `$${data.last_close.toFixed(2)}`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error fetching stock data');
+                });
+        }
+    </script>
+</body>
+</html>
