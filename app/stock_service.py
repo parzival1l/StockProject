@@ -3,6 +3,11 @@ import pandas as pd
 from typing import Dict, Any
 from datetime import datetime, timedelta
 import pytz
+import os
+import requests
+
+# Add this at the top of the file
+ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'YOUR_API_KEY_HERE')
 
 def test_yfinance():
     """
@@ -17,6 +22,35 @@ def test_yfinance():
     except Exception as e:
         print(f"YFinance test failed: {str(e)}")
         return False
+
+def get_stock_news(symbol: str) -> list:
+    """
+    Fetch news articles related to the stock symbol
+    """
+    try:
+        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&apikey={ALPHA_VANTAGE_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+
+        if "feed" not in data:
+            return []
+
+        # Get the top 5 news articles
+        news_articles = []
+        for article in data["feed"][:5]:
+            news_articles.append({
+                "title": article.get("title", ""),
+                "summary": article.get("summary", ""),
+                "url": article.get("url", ""),
+                "source": article.get("source", ""),
+                "time_published": article.get("time_published", ""),
+                "sentiment": article.get("overall_sentiment_label", "neutral")
+            })
+
+        return news_articles
+    except Exception as e:
+        print(f"Error fetching news: {str(e)}")
+        return []
 
 def get_stock_data(symbol: str, period: str) -> Dict[str, Any]:
     """
@@ -76,6 +110,9 @@ def get_stock_data(symbol: str, period: str) -> Dict[str, Any]:
                 "day_high": float(hist['High'].max()),
                 "day_low": float(hist['Low'].min())
             })
+
+        # Add news data to the response
+        response_data["news"] = get_stock_news(symbol)
 
         return response_data
 

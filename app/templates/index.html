@@ -44,6 +44,11 @@
             <p>Last Open: <span id="lastOpen">-</span></p>
             <p>Last Close: <span id="lastClose">-</span></p>
         </div>
+
+        <div class="news-container">
+            <h2>Latest News</h2>
+            <div id="newsItems" class="news-grid"></div>
+        </div>
     </div>
 
     <script>
@@ -198,6 +203,33 @@
                     // Update last open/close values
                     document.getElementById('lastOpen').textContent = `$${data.last_open.toFixed(2)}`;
                     document.getElementById('lastClose').textContent = `$${data.last_close.toFixed(2)}`;
+
+                    // Update news section
+                    const newsContainer = document.getElementById('newsItems');
+                    newsContainer.innerHTML = ''; // Clear existing news
+
+                    if (data.news && data.news.length > 0) {
+                        data.news.forEach(article => {
+                            const newsCard = document.createElement('div');
+                            newsCard.className = 'news-card';
+                            newsCard.innerHTML = `
+                                <div class="news-card-header">
+                                    <span class="news-source">${article.source}</span>
+                                    <span class="news-sentiment ${article.sentiment}">${article.sentiment}</span>
+                                </div>
+                                <h3 class="news-title">
+                                    <a href="${article.url}" target="_blank">${article.title}</a>
+                                </h3>
+                                <p class="news-summary">${article.summary}</p>
+                                <div class="news-footer">
+                                    <span class="news-time">${new Date(article.time_published).toLocaleString()}</span>
+                                </div>
+                            `;
+                            newsContainer.appendChild(newsCard);
+                        });
+                    } else {
+                        newsContainer.innerHTML = '<p class="no-news">No recent news available</p>';
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
