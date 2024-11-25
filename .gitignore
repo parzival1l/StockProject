@@ -31,4 +31,9 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
-stock_env/*
+
+# Virtual Environment
+venv/
+env/
+stock_env/
+.env
