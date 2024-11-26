@@ -2,6 +2,9 @@
 
 ## Overview
 This application is a real-time stock market analytics dashboard that combines Flask, FastAPI, and yfinance to provide interactive stock data visualization and news updates. Users can analyze stock prices with customizable time periods, detailed market insights, and relevant news articles.
+```
+Created with cursor (claude-3.5 sonnet) + superwhisper - completely using voice, no manual coding done, except for a few admin work. 
+```
 
 ## Features
 - **Real-time Stock Data**: Fetch current and historical stock data using yfinance
